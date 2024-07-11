@@ -4,7 +4,7 @@ import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { envs } from './config';
-import { NotFoundExceptionFilter } from './common';
+import { RpcCustomExceptionFilter } from './common';
 
 const API_PREFIX = 'api';
 const JSON_LIMIT = '50mb';
@@ -22,7 +22,7 @@ async function configureMiddleware(app: INestApplication<any>) {
     }),
   );
 
-  app.useGlobalFilters(new NotFoundExceptionFilter());
+  app.useGlobalFilters(new RpcCustomExceptionFilter());
 
   app.setGlobalPrefix(API_PREFIX);
 

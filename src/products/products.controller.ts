@@ -1,5 +1,4 @@
 import {
-  BadRequestException,
   Body,
   Controller,
   Delete,
@@ -11,7 +10,7 @@ import {
   Post,
   Query,
 } from '@nestjs/common';
-import { ClientProxy } from '@nestjs/microservices';
+import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {
   ApiBody,
   ApiOperation,
@@ -19,7 +18,7 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { first, firstValueFrom } from 'rxjs';
+import { catchError } from 'rxjs';
 import { PaginationDto } from 'src/common';
 
 @ApiTags('products')
@@ -48,15 +47,15 @@ export class ProductsController {
     schema: { type: 'integer' },
   })
   findAll(@Query() paginationDto: PaginationDto) {
-    try {
-      const products = firstValueFrom(
-        this.productsClient.send('find-all-products', { ...paginationDto }),
+    return this.productsClient
+      .send('find-all-products', {
+        ...paginationDto,
+      })
+      .pipe(
+        catchError((err) => {
+          throw new RpcException(err);
+        }),
       );
-
-      return products;
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
   }
 
   @Get(':id')
@@ -67,16 +66,12 @@ export class ProductsController {
     type: Number,
   })
   @ApiOperation({ summary: 'Retrieve a single product by ID' })
-  async findOne(@Param('id', ParseIntPipe) id: number) {
-    try {
-      const product = await firstValueFrom(
-        this.productsClient.send('find-one-product', { id }),
-      );
-
-      return product;
-    } catch (error) {
-      throw new BadRequestException(error.message);
-    }
+  findOne(@Param('id', ParseIntPipe) id: number) {
+    return this.productsClient.send('find-one-product', { id }).pipe(
+      catchError((err) => {
+        throw new RpcException(err);
+      }),
+    );
   }
 
   @Patch(':id')
