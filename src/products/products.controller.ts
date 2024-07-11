@@ -20,6 +20,7 @@ import {
 } from '@nestjs/swagger';
 import { catchError } from 'rxjs';
 import { PaginationDto } from 'src/common';
+import { CreateProductDto, UpdateProductDto } from './dto';
 
 @ApiTags('products')
 @Controller('products')
@@ -30,8 +31,13 @@ export class ProductsController {
 
   @Post()
   @ApiOperation({ summary: 'Create a new product' })
-  createProduct() {
-    return 'Create product';
+  @ApiBody({ description: 'The product to create', type: CreateProductDto })
+  createProduct(@Body() createProductDto: CreateProductDto) {
+    return this.productsClient.send('create-product', createProductDto).pipe(
+      catchError((err) => {
+        throw new RpcException(err);
+      }),
+    );
   }
 
   @Get()
@@ -83,7 +89,7 @@ export class ProductsController {
   })
   @ApiBody({
     description: 'The product to update',
-    type: Object,
+    type: UpdateProductDto,
   })
   @ApiOperation({ summary: 'Update a product by ID' })
   update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
