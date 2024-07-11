@@ -1,17 +1,46 @@
 import { json, urlencoded } from 'express';
 import { NestFactory } from '@nestjs/core';
-import { Logger, ValidationPipe } from '@nestjs/common';
+import { INestApplication, Logger, ValidationPipe } from '@nestjs/common';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
 import { envs } from './config';
-import { NotFoundExceptionFilter } from './common/filters/notFoundException.filter';
+import { NotFoundExceptionFilter } from './common';
+
+const API_PREFIX = 'api';
+const JSON_LIMIT = '50mb';
+
+async function configureMiddleware(app: INestApplication<any>) {
+  app.use(json({ limit: JSON_LIMIT }));
+
+  app.use(urlencoded({ extended: true, limit: JSON_LIMIT }));
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
+
+  app.useGlobalFilters(new NotFoundExceptionFilter());
+
+  app.setGlobalPrefix(API_PREFIX);
+
+  app.enableCors({
+    origin: '*',
+    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
+    preflightContinue: false,
+    optionsSuccessStatus: 204,
+    credentials: false,
+    allowedHeaders: 'Content-Type, Authorization',
+  });
+}
 
 async function bootstrap() {
   const logger = new Logger('ClientGetaway - Bootstrap');
-
   const app = await NestFactory.create(AppModule);
 
-  app.setGlobalPrefix('api');
+  await configureMiddleware(app);
 
   const config = new DocumentBuilder()
     .addBearerAuth()
@@ -22,38 +51,12 @@ async function bootstrap() {
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
-
   SwaggerModule.setup('api/docs', app, document);
-
-  app.useGlobalPipes(
-    new ValidationPipe({
-      whitelist: true,
-      forbidNonWhitelisted: true,
-      transform: true,
-    }),
-  );
-
-  app.use(json({ limit: '50mb' }));
-
-  app.use(urlencoded({ extended: true, limit: '50mb' }));
-
-  app.setGlobalPrefix('api');
-
-  app.useGlobalFilters(new NotFoundExceptionFilter());
-
-  app.enableCors({
-    origin: '*',
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    preflightContinue: false,
-    optionsSuccessStatus: 204,
-    credentials: false,
-    allowedHeaders: 'Content-Type, Authorization',
-  });
 
   await app.listen(envs.port);
 
-  logger.log(`Getaway running on http://localhost:${envs.port}/api`);
-  logger.log(`Swagger running on http://localhost:${envs.port}/api/docs`);
+  logger.log(`Getaway running on: ${await app.getUrl()}/api`);
+  logger.log(`Swagger running on: ${await app.getUrl()}/api/docs`);
 }
 
 bootstrap();
