@@ -24,7 +24,7 @@ import { catchError } from 'rxjs';
 import { PaginationDto } from 'src/common';
 import { CreateProductDto, UpdateProductDto } from './dto';
 
-@ApiTags('products')
+@ApiTags('Products')
 @Controller('products')
 @UseInterceptors(ClassSerializerInterceptor)
 export class ProductsController {

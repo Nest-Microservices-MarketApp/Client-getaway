@@ -47,7 +47,8 @@ async function bootstrap() {
     .setTitle('MarketApp API')
     .setDescription('The MarketApp API description')
     .setVersion('1.0')
-    .addTag('products')
+    .addTag('Products')
+    .addTag('Orders')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
