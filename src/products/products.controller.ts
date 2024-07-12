@@ -36,7 +36,7 @@ export class ProductsController {
   @ApiOperation({ summary: 'Create a new product' })
   @ApiBody({ description: 'The product to create', type: CreateProductDto })
   createProduct(@Body() createProductDto: CreateProductDto) {
-    return this.productsClient.send('create-product', createProductDto).pipe(
+    return this.productsClient.send('createProduct', createProductDto).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
@@ -57,7 +57,7 @@ export class ProductsController {
   })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.productsClient
-      .send('find-all-products', {
+      .send('findAllProducts', {
         ...paginationDto,
       })
       .pipe(
@@ -76,7 +76,7 @@ export class ProductsController {
   })
   @ApiOperation({ summary: 'Retrieve a single product by ID' })
   findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.productsClient.send('find-one-product', { id }).pipe(
+    return this.productsClient.send('findOneProduct', { id }).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
@@ -100,7 +100,7 @@ export class ProductsController {
     @Body() updateProductDto: UpdateProductDto,
   ) {
     return this.productsClient
-      .send('update-product', { id, ...updateProductDto })
+      .send('updateProduct', { id, ...updateProductDto })
       .pipe(
         catchError((err) => {
           throw new RpcException(err);
@@ -117,7 +117,7 @@ export class ProductsController {
     type: Number,
   })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return this.productsClient.send('remove-product', { id }).pipe(
+    return this.productsClient.send('removeProduct', { id }).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
