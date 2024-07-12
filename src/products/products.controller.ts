@@ -1,5 +1,6 @@
 import {
   Body,
+  ClassSerializerInterceptor,
   Controller,
   Delete,
   Get,
@@ -9,6 +10,7 @@ import {
   Patch,
   Post,
   Query,
+  UseInterceptors,
 } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {
@@ -24,6 +26,7 @@ import { CreateProductDto, UpdateProductDto } from './dto';
 
 @ApiTags('products')
 @Controller('products')
+@UseInterceptors(ClassSerializerInterceptor)
 export class ProductsController {
   constructor(
     @Inject('PRODUCT_SERVICE') private readonly productsClient: ClientProxy,
@@ -45,12 +48,12 @@ export class ProductsController {
   @ApiQuery({
     name: 'limit',
     required: false,
-    schema: { type: 'integer' },
+    schema: { type: 'integer', default: 10 },
   })
   @ApiQuery({
     name: 'page',
     required: false,
-    schema: { type: 'integer' },
+    schema: { type: 'integer', default: 1 },
   })
   findAll(@Query() paginationDto: PaginationDto) {
     return this.productsClient
@@ -81,6 +84,7 @@ export class ProductsController {
   }
 
   @Patch(':id')
+  @ApiOperation({ summary: 'Update a product by ID' })
   @ApiParam({
     name: 'id',
     required: true,
@@ -91,20 +95,32 @@ export class ProductsController {
     description: 'The product to update',
     type: UpdateProductDto,
   })
-  @ApiOperation({ summary: 'Update a product by ID' })
-  update(@Param('id', ParseIntPipe) id: number, @Body() body: any) {
-    return 'Update product by id ' + id + ' with body ' + JSON.stringify(body);
+  update(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() updateProductDto: UpdateProductDto,
+  ) {
+    return this.productsClient
+      .send('update-product', { id, ...updateProductDto })
+      .pipe(
+        catchError((err) => {
+          throw new RpcException(err);
+        }),
+      );
   }
 
   @Delete(':id')
+  @ApiOperation({ summary: 'Delete a product by ID' })
   @ApiParam({
     name: 'id',
     required: true,
     description: 'The product ID',
     type: Number,
   })
-  @ApiOperation({ summary: 'Delete a product by ID' })
   remove(@Param('id', ParseIntPipe) id: number) {
-    return 'Delete product by id ' + id;
+    return this.productsClient.send('remove-product', { id }).pipe(
+      catchError((err) => {
+        throw new RpcException(err);
+      }),
+    );
   }
 }
