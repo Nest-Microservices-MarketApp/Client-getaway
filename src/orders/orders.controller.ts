@@ -5,11 +5,11 @@ import {
   Body,
   Patch,
   Param,
-  ParseIntPipe,
   ClassSerializerInterceptor,
   UseInterceptors,
   Inject,
   Query,
+  ParseUUIDPipe,
 } from '@nestjs/common';
 import { ClientProxy, RpcException } from '@nestjs/microservices';
 import {
@@ -20,8 +20,8 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import { catchError } from 'rxjs';
+import { CreateOrderDto, OrderPaginationDto, StatusDto } from './dto';
 import { PaginationDto } from 'src/common';
-import { CreateOrderDto, UpdateOrderDto } from './dto';
 
 @ApiTags('Orders')
 @Controller('Orders')
@@ -54,24 +54,66 @@ export class OrdersController {
     required: false,
     schema: { type: 'integer', default: 1 },
   })
-  findAll(@Query() paginationDto: PaginationDto) {
-    return this.orderClient.send('findAllOrders', { ...paginationDto }).pipe(
-      catchError((err) => {
-        throw new RpcException(err);
-      }),
-    );
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    description: 'The order status',
+    schema: { type: 'string', enum: ['PENDING', 'DELIVERED', 'CANCELLED'] },
+  })
+  findAll(@Query() orderPaginationDto: OrderPaginationDto) {
+    return this.orderClient
+      .send('findAllOrders', { ...orderPaginationDto })
+      .pipe(
+        catchError((err) => {
+          throw new RpcException(err);
+        }),
+      );
   }
 
-  @Get(':id')
+  @Get(':status')
+  @ApiOperation({ summary: 'Retrieve all orders by status' })
+  @ApiParam({
+    name: 'status',
+    required: true,
+    description: 'The order status',
+    schema: { type: 'string', enum: ['PENDING', 'DELIVERED', 'CANCELLED'] },
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    schema: { type: 'integer', default: 10 },
+  })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    schema: { type: 'integer', default: 1 },
+  })
+  async findAllByStatus(
+    @Param() statusDto: StatusDto,
+    @Query() paginationDto: PaginationDto,
+  ) {
+    return this.orderClient
+      .send('findAllOrders', {
+        ...paginationDto,
+        status: statusDto.status,
+      })
+      .pipe(
+        catchError((err) => {
+          throw new RpcException(err);
+        }),
+      );
+  }
+
+  @Get('id/:id')
   @ApiOperation({ summary: 'Retrieve a single order' })
   @ApiParam({
     name: 'id',
     required: true,
     description: 'The order ID',
-    type: Number,
+    type: String,
   })
-  findOne(@Param('id', ParseIntPipe) id: number) {
-    return this.orderClient.send('findOneOrder', id).pipe(
+  async findOne(@Param('id', ParseUUIDPipe) id: string) {
+    return this.orderClient.send('findOneOrder', { id }).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
@@ -84,14 +126,15 @@ export class OrdersController {
     name: 'id',
     required: true,
     description: 'The order ID',
-    type: Number,
+    type: String,
   })
+  @ApiBody({ description: 'The new status', type: StatusDto })
   changeStatus(
-    @Param('id', ParseIntPipe) id: number,
-    @Body() updateOrderDto: UpdateOrderDto,
+    @Param('id', ParseUUIDPipe) id: string,
+    @Body() statusDto: StatusDto,
   ) {
     return this.orderClient
-      .send('changeOrderStatus', { id, ...updateOrderDto })
+      .send('changeOrderStatus', { id, ...statusDto })
       .pipe(
         catchError((err) => {
           throw new RpcException(err);

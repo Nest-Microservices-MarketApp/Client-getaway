@@ -21,7 +21,7 @@ export class RpcCustomExceptionFilter implements ExceptionFilter {
 
     const rpcError = exception.getError() as RpcError | string;
 
-    if (this.isRpcError(rpcError)) {
+    if (this.isRpcError(rpcError) && this.isValidHttpStatus(rpcError.status)) {
       return response.status(rpcError.status).json({
         status: rpcError.status,
         message: rpcError.message,
@@ -39,5 +39,9 @@ export class RpcCustomExceptionFilter implements ExceptionFilter {
 
   private isRpcError(error: any): error is RpcError {
     return typeof error === 'object' && 'status' in error && 'message' in error;
+  }
+
+  private isValidHttpStatus(status: any): boolean {
+    return typeof status === 'number' && status >= 100 && status <= 599;
   }
 }
