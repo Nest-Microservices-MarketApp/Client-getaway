@@ -22,20 +22,19 @@ import {
 import { catchError } from 'rxjs';
 import { CreateOrderDto, OrderPaginationDto, StatusDto } from './dto';
 import { PaginationDto } from 'src/common';
+import { NATS_SERVICE } from 'src/config';
 
 @ApiTags('Orders')
 @Controller('Orders')
 @UseInterceptors(ClassSerializerInterceptor)
 export class OrdersController {
-  constructor(
-    @Inject('ORDER_SERVICE') private readonly orderClient: ClientProxy,
-  ) {}
+  constructor(@Inject(NATS_SERVICE) private readonly client: ClientProxy) {}
 
   @Post()
   @ApiOperation({ summary: 'Create a new order' })
   @ApiBody({ description: 'The order to create', type: CreateOrderDto })
   create(@Body() createOrderDto: CreateOrderDto) {
-    return this.orderClient.send('createOrder', createOrderDto).pipe(
+    return this.client.send('createOrder', createOrderDto).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
@@ -61,13 +60,11 @@ export class OrdersController {
     schema: { type: 'string', enum: ['PENDING', 'DELIVERED', 'CANCELLED'] },
   })
   findAll(@Query() orderPaginationDto: OrderPaginationDto) {
-    return this.orderClient
-      .send('findAllOrders', { ...orderPaginationDto })
-      .pipe(
-        catchError((err) => {
-          throw new RpcException(err);
-        }),
-      );
+    return this.client.send('findAllOrders', { ...orderPaginationDto }).pipe(
+      catchError((err) => {
+        throw new RpcException(err);
+      }),
+    );
   }
 
   @Get(':status')
@@ -92,7 +89,7 @@ export class OrdersController {
     @Param() statusDto: StatusDto,
     @Query() paginationDto: PaginationDto,
   ) {
-    return this.orderClient
+    return this.client
       .send('findAllOrders', {
         ...paginationDto,
         status: statusDto.status,
@@ -113,7 +110,7 @@ export class OrdersController {
     type: String,
   })
   async findOne(@Param('id', ParseUUIDPipe) id: string) {
-    return this.orderClient.send('findOneOrder', { id }).pipe(
+    return this.client.send('findOneOrder', { id }).pipe(
       catchError((err) => {
         throw new RpcException(err);
       }),
@@ -133,12 +130,10 @@ export class OrdersController {
     @Param('id', ParseUUIDPipe) id: string,
     @Body() statusDto: StatusDto,
   ) {
-    return this.orderClient
-      .send('changeOrderStatus', { id, ...statusDto })
-      .pipe(
-        catchError((err) => {
-          throw new RpcException(err);
-        }),
-      );
+    return this.client.send('changeOrderStatus', { id, ...statusDto }).pipe(
+      catchError((err) => {
+        throw new RpcException(err);
+      }),
+    );
   }
 }
