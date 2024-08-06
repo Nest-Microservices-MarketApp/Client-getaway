@@ -1,7 +1,7 @@
 import {
   Catch,
-  ArgumentsHost,
   ExceptionFilter,
+  ArgumentsHost,
   HttpStatus,
   Logger,
 } from '@nestjs/common';
@@ -21,16 +21,49 @@ export class RpcCustomExceptionFilter implements ExceptionFilter {
     const response = ctx.getResponse();
     const rpcError = this.extractRpcError(exception);
 
+    if (this.isEmptyResponseError(rpcError)) {
+      return this.handleEmptyResponseError(response, rpcError);
+    }
+
     if (this.isRpcError(rpcError) && this.isValidHttpStatus(rpcError.status)) {
       return this.handleKnownError(response, rpcError);
     }
 
-    this.logger.error('Unhandled RPC exception:', exception);
-    return this.handleUnknownError(response, exception);
+    this.logger.error(
+      'Unhandled RPC exception:',
+      exception.message,
+      exception.stack,
+    );
+    return this.handleUnknownError(response);
   }
 
   private extractRpcError(exception: RpcException): RpcError | string {
     return exception.getError() as RpcError | string;
+  }
+
+  private isEmptyResponseError(rpcError: RpcError | string): boolean {
+    return rpcError.toString().includes('Empty response');
+  }
+
+  private handleEmptyResponseError(response: any, rpcError: RpcError | string) {
+    return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
+      status: HttpStatus.INTERNAL_SERVER_ERROR,
+      message: rpcError
+        .toString()
+        .substring(0, rpcError.toString().indexOf('(') - 1),
+    });
+  }
+
+  private isRpcError(error: any): error is RpcError {
+    return (
+      error &&
+      typeof error.status === 'number' &&
+      typeof error.message === 'string'
+    );
+  }
+
+  private isValidHttpStatus(status: number): boolean {
+    return Object.values(HttpStatus).includes(status);
   }
 
   private handleKnownError(response: any, rpcError: RpcError) {
@@ -40,18 +73,10 @@ export class RpcCustomExceptionFilter implements ExceptionFilter {
     });
   }
 
-  private handleUnknownError(response: any, exception: RpcException) {
+  private handleUnknownError(response: any) {
     return response.status(HttpStatus.INTERNAL_SERVER_ERROR).json({
       status: HttpStatus.INTERNAL_SERVER_ERROR,
-      message: `Internal server error: ${exception.message}`,
+      message: 'Internal server error',
     });
-  }
-
-  private isRpcError(error: any): error is RpcError {
-    return typeof error === 'object' && 'status' in error && 'message' in error;
-  }
-
-  private isValidHttpStatus(status: any): boolean {
-    return typeof status === 'number' && status >= 100 && status <= 599;
   }
 }
