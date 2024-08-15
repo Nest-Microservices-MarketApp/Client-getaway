@@ -38,7 +38,7 @@ async function configureMiddleware(app: INestApplication<any>) {
 
 async function bootstrap() {
   const logger = new Logger('ClientGetaway - Bootstrap');
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, { rawBody: true });
 
   await configureMiddleware(app);
 
